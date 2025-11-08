@@ -1,0 +1,35 @@
+
+import pandas as pd 
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+df = pd.read_csv("dataset/MSY Data - Shipment.csv") 
+print(df.head())
+
+
+#new col w/ quantity*shipment
+df['quantity*shipment'] = df['Quantity per shipment'] * df['Number of shipments']
+df['Total monthly shipment'] = np.where(
+    df['frequency'].str.lower() == 'weekly',
+    df['quantity*shipment'] * 4,
+    np.where(
+        df['frequency'].str.lower() == 'biweekly',
+        df['quantity*shipment'] * 2,
+        np.where(
+            df['frequency'].str.lower() == 'monthly',
+            df['quantity*shipment'],
+            np.nan 
+        )
+    )
+)
+print(df.head())
+
+
+#viz
+df.plot.bar(x='Ingredient', y='Total monthly shipment')
+plt.show()
+
+
+
+
