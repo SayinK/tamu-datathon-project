@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
 
-st.title("My Streamlit App")
+st.title("Sales Dashboard")
+st.header("Monthly Revenue Chart")
 
-df = pd.read_csv("data.csv")  # same folder as this script
-st.write("Preview:", df.head())
+df = pd.read_csv("data.csv")
+st.write("Here is the raw data:")
+st.dataframe(df)
 
-# Option A: plot all numeric columns
-st.line_chart(df.select_dtypes("number"))
+st.write("Revenue over time:")
+st.line_chart(df.set_index('Month')['Revenue'])
