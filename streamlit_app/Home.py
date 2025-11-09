@@ -1,4 +1,3 @@
-# Home.py — Landing page (no data loading)
 import streamlit as st
 
 st.set_page_config(
@@ -8,9 +7,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-PRIMARY = "#cd1b1b"  # use the alpha-less hex for CSS
+PRIMARY = "#cd1b1b" 
 
-# ---------- Accent CSS (uses your primary color) ----------
 st.markdown(
     f"""
     <style>
@@ -69,7 +67,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ---------- Hero ----------
 st.markdown(
     """
     <div style="padding:48px 0 12px 0;">
@@ -85,7 +82,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ---------- Quick actions ----------
 c1, c2 = st.columns([1.1, 1])
 with c1:
     st.page_link("pages/Shipment_Dashboard.py", label="Open Shipments Dashboard", icon="📊")
@@ -94,7 +90,6 @@ with c2:
 
 st.divider()
 
-# ---------- Feature tiles ----------
 fc1, fc2 = st.columns(2)
 with fc1:
     st.markdown(
@@ -122,7 +117,6 @@ with fc2:
         unsafe_allow_html=True,
     )
 
-# ---------- Footer ----------
 st.markdown(
     """
     <div style="opacity:.55; font-size:13px; padding-top:28px;">
@@ -131,3 +125,4 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
