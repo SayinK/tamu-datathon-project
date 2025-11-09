@@ -1,43 +1,36 @@
 # TAMU-DATATHON-Project 📊
-Mai-Shan-Yun Inventory Intelligence Challenge
+## Mai-Shan-Yun Inventory Intelligence Challenge
+Mai-Shan-Yun project is to design and build an interactive dashboard that transforms raw restaurant data into actionable intelligence.
 
 <br/>
 
 
 # Dashboard purpose and Key Insights 🔑
- - Vizualize most profitable items and ingredients that are most used and most used in profitable items 
+ - Identify top-profit items and frequently used ingredients.
 
- - Vizualize ingredient shipment quantities per month in comparison to ingredient monthly ingredient usage
+ - Vizualize ingredient shipments in comparison to monthly ingredient usage.
 
- - Vizualize whitch items bring in the most profits by month in comparison to how much profits they bring in per month on average
+ - Track monthly profit trends by menu item.
 
- - Predict the quantity of ingredients needed for upcoming months.
+ - Forecast future ingredient demand.
 
 <br/>
 
 # Datasets used and How They were integrated
-by project item ##(option 1)## :
-- Shipment data was used to count total amounts of ingredients recieved into inventory per month (in respective units) along with ingredient and monthly data to compare with monthly usage/expenditure of each ingredient
-
-- Ingredients and months datasets were used in combination to determine what ingredients were used most and therefore contributed most to the amount of profits
-
-- Month datasets were used to compare and visualize each item's profitability for that month and compare its profitability to the average profitability across all months
+	•	Shipments: Tracked total quantities of ingredients received each period of time (by unit) and compared them with monthly ingredient usage to analyze inventory flow.
+	•	Ingredients: Combined with monthly data to identify the most frequently used ingredients and their contribution to profit generation.
+	•	Months: Used to evaluate and visualize item profitability by month and to compare monthly performance with overall averages.
 
 
-
-by dataset ##(option 2)## :
-- the ingredients dataset was used in various instances to vizualize the ingredients used in items that brought in the most profits, total amounts of ingredients used
-
-- the shipment dataset was used to calculate amounts of ingredients coming in per month and comparing with the amount of ingridients used
-
-- the month datasets were used to calculate the most profitable items and categories per month and on average between months, and in combination with the ingredients dataset to predict the quantities of ingredients needed
+# Technologies used
+- Frontend : Streamlit, 
+- Backend : 
 
 
+# Setup and Run Instructions
 
-# setup and run instructions
 
-
-# example insights or use cases
+# Example Insights or Use Cases
 
 
 
