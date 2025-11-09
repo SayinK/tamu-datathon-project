@@ -6,7 +6,7 @@ import tempfile
 import os
 
 st.set_page_config(page_title="Menu Ingredient Network", layout="wide")
-st.title("🧩 Menu Item - Ingredient Network for May")
+st.title("Menu Item - Ingredient Network for May")
 
 min_qty = 10
 top_n_items = 10 

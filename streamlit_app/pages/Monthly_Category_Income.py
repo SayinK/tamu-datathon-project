@@ -7,11 +7,14 @@ import altair as alt
 
 st.set_page_config(page_title="Monthly Matrix • Data 1 & Data 2", layout="wide")
 
+# ---------- Theme / config ----------
 PRIMARY = "#cd1b1b"
 
+# Data 1 canonical groups (stacked bar segments)
 D1_GROUPS = ["All Day Menu", "Lunch Menu", "Open Food", "Gift Card", "Signature Drinks"]
 D1_COLORS = ["#7f1d1d", "#b91c1c", "#ef4444", "#f97316", "#f59e0b"]
 
+# Data 2 known categories
 D2_CATEGORIES = [
     "Additional", "Appetizer", "Bingsu", "Combo Items", "Dessert", "Drink",
     "Fried Chicken", "Fried Rice", "Fruit Tea", "Gift Card", "Jas-Lemonade",
@@ -20,6 +23,7 @@ D2_CATEGORIES = [
     "Tossed Rice Noodle", "Wonton"
 ]
 
+# Resolve ../data relative to this page
 DATA_DIR = (Path(__file__).parent.parent / "data").resolve()
 MONTH_FILE_RE = re.compile(r"^([A-Za-z]+)_Data_Matrix\.(xlsx|xls|csv)$", re.I)
 
@@ -37,6 +41,7 @@ def discover_month_files() -> dict[str, Path]:
         mapping[month_name] = p
     return dict(sorted(mapping.items(), key=lambda kv: _month_key(kv[0])))
 
+# ---------- Loaders with October swap ----------
 @st.cache_data(show_spinner=False)
 def load_data1_for_month(path: Path, month_label: str) -> pd.DataFrame:
     """Load Data 1, except for October where we take 'data 3'."""
@@ -88,7 +93,8 @@ def load_data2_for_month(path: Path, month_label: str) -> pd.DataFrame:
     out["Month"] = month_label
     return out
 
-tabs = st.tabs(["📊 Data 1 — Stacked Revenue", "🥧 Data 2 — Category Pies"])
+# ---------- UI ----------
+tabs = st.tabs(["Data 1 — Stacked Revenue", "Data 2 — Category Pies"])
 
 with tabs[0]:
     st.markdown(
@@ -123,6 +129,7 @@ with tabs[0]:
             d1_groups = D1_GROUPS[:]
     color_scale = alt.Scale(domain=d1_groups, range=D1_COLORS[:len(d1_groups)])
 
+    # Load & combine
     frames1 = [load_data1_for_month(month_to_path[m], m) for m in months_d1]
     d1 = pd.concat(frames1, ignore_index=True) if frames1 else pd.DataFrame(columns=["Group","Amount","Month"])
 
@@ -161,6 +168,9 @@ with tabs[0]:
             use_container_width=True
         )
 
+# =========================
+# === TAB 2: DATA 2 UI ===
+# =========================
 with tabs[1]:
     st.markdown(
         f"""
@@ -256,4 +266,3 @@ with tabs[1]:
 
     with st.expander("Show raw table (Data 2)"):
         st.dataframe(d2.sort_values(["Month", "Category"]), use_container_width=True)
-

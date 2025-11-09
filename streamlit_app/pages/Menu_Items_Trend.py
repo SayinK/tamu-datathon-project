@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import os
 
 st.set_page_config(page_title="Menu Item Trends", layout="wide")
-st.title("📊 Menu Item Popularity Trends")
+st.title("Menu Item Popularity Trends")
 
 dataset_folder = "data"
 MONTH_ORDER = ["May", "June", "July", "August", "September", "October"]
@@ -78,7 +78,7 @@ for i, item in enumerate(top_items):
     ))
 
 fig.update_layout(
-    title="📈 Menu Item Popularity Trends (Sales Count)",
+    title="Menu Item Popularity Trends (Sales Count)",
     xaxis_title="Month",
     yaxis_title="Sales Count",
     height=600,
