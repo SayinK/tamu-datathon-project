@@ -47,3 +47,9 @@ To further increase its accuracy, scope, and strategic value, the following impr
 - Deploy the Streamlit app for cloud access and multi-user functionality.
 - Connect to live databases or APIs for real-time data.
 - Automated alerts for upcoming shortages or excess stock.
+
+## How to run
+- Install venv for Python
+- Activate the virtual environment 
+- run: streamlit run Home.py
+
