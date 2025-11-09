@@ -90,7 +90,7 @@ c1, c2 = st.columns([1.1, 1])
 with c1:
     st.page_link("pages/Shipment_Dashboard.py", label="Open Shipments Dashboard", icon="📊")
 with c2:
-    st.page_link("pages/Monthly_Shipments.py", label="Open Monthly Shipments", icon="🗓️")
+    st.page_link("pages/Monthly_Shipments.py", label="Open Monthly Sales", icon="🗓️")
 
 st.divider()
 
