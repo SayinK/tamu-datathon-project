@@ -9,8 +9,24 @@ st.title("🍗 Ingredients Dashboard")
 st.caption("Bars are all displays of monthly frequency per item!")
 
 # --- Load data ---
-CSV_PATH = Path("../data/MSY Data - Shipment.csv")  # adjust if needed
-df = pd.read_csv(CSV_PATH)
+APP_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = APP_ROOT / "data"
+CSV_PATH = DATA_DIR / "MSY Data - Shipment.csv"          # <- exact filename
+XLSX_PATH = DATA_DIR / "MSY Data - Shipment.xlsx"        # <- fallback if it's actually Excel
+
+# Quick sanity checks (optional but helpful while debugging)
+## st.write("Data dir:", DATA_DIR)
+## st.write("CSV exists?", CSV_PATH.exists())
+## st.write("XLSX exists?", XLSX_PATH.exists())
+
+# Load with a fallback to Excel
+if CSV_PATH.exists():
+    df = pd.read_csv(CSV_PATH)
+elif XLSX_PATH.exists():
+    df = pd.read_excel(XLSX_PATH, engine="openpyxl")
+else:
+    st.error(f"Couldn’t find the data file.\nLooked for:\n- {CSV_PATH}\n- {XLSX_PATH}")
+    st.stop()
 
 # --- Clean + compute ---
 freq_map = {"weekly": 4, "biweekly": 2, "monthly": 1}
