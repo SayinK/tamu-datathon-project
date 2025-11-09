@@ -1,5 +1,5 @@
 # TAMU-DATATHON-Project 2025 📊
-**Mai-Shan-Yun Viison** <br/>
+**Mai-Shan-Yun Vision** <br/>
 Mai-Shan-Yun project is to design and build an interactive dashboard that transforms raw restaurant data into actionable intelligence.
 
 <br/>
