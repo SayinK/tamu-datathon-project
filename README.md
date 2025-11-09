@@ -1,27 +1,27 @@
-# tamu-datathon-project
-Project for 2025 TAMU Datathon
+# TAMU-DATATHON-Project 📊
+Mai-Shan-Yun Inventory Intelligence Challenge
+
+<br/>
 
 
+# Dashboard purpose and Key Insights 🔑
+ - Vizualize most profitable items and ingredients that are most used and most used in profitable items 
 
+ - Vizualize ingredient shipment quantities per month in comparison to ingredient monthly ingredient usage
 
-# dashboard purpose and key insights
- - vizualize most profitable items and ingredients that are most used and most used in profitable items 
+ - Vizualize whitch items bring in the most profits by month in comparison to how much profits they bring in per month on average
 
- - vizualize ingredient shipment quantities per month in comparison to ingredient monthly ingredient usage
+ - Predict the quantity of ingredients needed for upcoming months.
 
- - vizualize whitch items bring in the most profits by month in comparison to how much profits they bring in per month on average
+<br/>
 
- - predict (something ???? im lowk not shore ????)
-
-
-
-# datasets used and how they were integrated
+# Datasets used and How They were integrated
 by project item ##(option 1)## :
-- shipment data was used to count total amounts of ingredients recieved into inventory per month (in respective units) along with ingredient and monthly data to compare with monthly usage/expenditure of each ingredient
+- Shipment data was used to count total amounts of ingredients recieved into inventory per month (in respective units) along with ingredient and monthly data to compare with monthly usage/expenditure of each ingredient
 
-- ingredients and months datasets were used in combination to determine what ingredients were used most and therefore contributed most to the amount of profits
+- Ingredients and months datasets were used in combination to determine what ingredients were used most and therefore contributed most to the amount of profits
 
-- month datasets were used to compare and visualize each item's profitability for that month and compare its profitability to the average profitability across all months
+- Month datasets were used to compare and visualize each item's profitability for that month and compare its profitability to the average profitability across all months
 
 
 
