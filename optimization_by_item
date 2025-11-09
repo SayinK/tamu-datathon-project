@@ -1,0 +1,73 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+def load_month_data(file_path, sheet_name, month_name):
+    df = pd.read_excel(file_path, sheet_name=sheet_name)
+
+    item_col = next((col for col in df.columns if 'item' in col.lower()), None)
+    amount_col = next((col for col in df.columns if 'amount' in col.lower()), None)
+
+    #remove symbols and convert amount to numeric
+    df[amount_col] = pd.to_numeric(df[amount_col].replace('[\$,]', '', regex=True), errors='coerce')
+
+    #check for missing vals and 0's
+    df = df[df[amount_col].notna() & (df[amount_col] != 0)]
+
+    df = df[[item_col, amount_col]].rename(columns={item_col: 'Item Name', amount_col: 'Amount'})
+    df['Month'] = month_name
+
+    return df
+
+
+files = [
+    ("dataset/May_Data_Matrix (1).xlsx", "data 3", "May"),
+    ("dataset/June_Data_Matrix.xlsx", "data 3", "June"),
+    ("dataset/July_Data_Matrix (1).xlsx", "data 3", "July"),
+    ("dataset/August_Data_Matrix (1).xlsx", "data 3", "August"),
+    ("dataset/September_Data_Matrix.xlsx", "data 3", "September"),
+    ("dataset/October_Data_Matrix_20251103_214000.xlsx", "data 2", "October"),  # note: different sheet
+]
+
+dfs = [load_month_data(path, sheet, name) for path, sheet, name in files]
+dfs = [df for df in dfs if df is not None]  # drop missing ones
+
+
+combined_df = pd.concat(dfs, ignore_index=True)
+avg_df = combined_df.groupby('Item Name', as_index=False)['Amount'].mean()
+
+
+def plot_monthly_amount(file_path, sheet_name, month_name, avg_df):
+    """Plots this month's item Amounts vs. overall averages."""
+    df = load_month_data(file_path, sheet_name, month_name)
+    if df is None:
+        return
+
+    df = df.sort_values(by='Amount', ascending=False)
+    items = df['Item Name']
+    amounts = df['Amount']
+
+    #match items and averages
+    avg_amounts = avg_df.set_index('Item Name').reindex(items)['Amount'].fillna(0)
+
+    #plot
+    x = np.arange(len(items))
+    width = 0.4
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.bar(x - width/2, amounts, width, label=f'{month_name}')
+    ax.bar(x + width/2, avg_amounts, width, label='Average Across Months')
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(items, rotation=45, ha='right')
+    ax.set_ylabel('Profit ($)')
+    ax.set_title(f'Profit ($) by Item - {month_name} vs. Average')
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+for path, sheet, name in files:
+    plot_monthly_amount(path, sheet, name, avg_df)
+
+
