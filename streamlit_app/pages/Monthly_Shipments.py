@@ -1,149 +1,296 @@
+# pages/Monthly_Shipments.py
 import re
 from pathlib import Path
 import pandas as pd
 import streamlit as st
 import altair as alt
 
-st.set_page_config(page_title="Monthly Matrix • Dot Plots", layout="wide")
+st.set_page_config(page_title="Monthly Matrix • Data 1 & Data 2", layout="wide")
 
-# Resolve ../data relative to THIS file (pages/…/your_page.py)
+# ---------- Theme / config ----------
+PRIMARY = "#cd1b1b"
+
+# Data 1 canonical groups (stacked bar segments)
+D1_GROUPS = ["All Day Menu", "Lunch Menu", "Open Food", "Gift Card", "Signature Drinks"]
+D1_COLORS = ["#7f1d1d", "#b91c1c", "#ef4444", "#f97316", "#f59e0b"]
+
+# Data 2 known categories (from your list)
+D2_CATEGORIES = [
+    "Additional", "Appetizer", "Bingsu", "Combo Items", "Dessert", "Drink",
+    "Fried Chicken", "Fried Rice", "Fruit Tea", "Gift Card", "Jas-Lemonade",
+    "Lunch Special", "Mai Dessert", "Milk Tea", "Open Food", "Prep item",
+    "Ramen", "Rice Noodle", "Special Offer", "Tossed Ramen",
+    "Tossed Rice Noodle", "Wonton"
+]
+
+# Resolve ../data relative to this page
 DATA_DIR = (Path(__file__).parent.parent / "data").resolve()
-
-# Accept CSV/XLSX/XLS and strict naming like May_Data_Matrix.xlsx
-MONTH_FILE_RE = re.compile(r"^([A-Za-z]+)_Data_Matrix\.(csv|xlsx|xls)$", re.I)
+MONTH_FILE_RE = re.compile(r"^([A-Za-z]+)_Data_Matrix\.(xlsx|xls|csv)$", re.I)
 
 def _month_key(m: str) -> int:
     return pd.to_datetime(m, format="%B").month
 
-# Discover month files
-month_to_path = {}
-for p in DATA_DIR.glob("*_Data_Matrix.*"):
-    m = MONTH_FILE_RE.match(p.name)
-    if m:
-        month_name = m.group(1).capitalize()   # e.g., "May"
-        month_to_path[month_name] = p
+def discover_month_files() -> dict[str, Path]:
+    """Return {MonthName -> Path} for files that match *_Data_Matrix.* (calendar order)."""
+    mapping: dict[str, Path] = {}
+    for p in DATA_DIR.glob("*_Data_Matrix.*"):
+        m = MONTH_FILE_RE.match(p.name)
+        if not m:
+            continue
+        month_name = m.group(1).capitalize()
+        mapping[month_name] = p
+    return dict(sorted(mapping.items(), key=lambda kv: _month_key(kv[0])))
 
-months_available = sorted(month_to_path.keys(), key=_month_key)
+# ---------- Loaders ----------
+@st.cache_data(show_spinner=False)
+def load_data1(path: Path, month_label: str) -> pd.DataFrame:
+    """Read sheet 'data 1' with columns ['Group', 'Amount']."""
+    if path.suffix.lower() == ".csv":
+        df = pd.read_csv(path)  # CSV would need to already be data 1
+    else:
+        df = pd.read_excel(path, sheet_name="data 1", engine="openpyxl")
+    df.columns = [c.strip() for c in df.columns]
 
-# ---- Guard: nothing found
-if not months_available:
-    st.error(
-        f"No monthly files found in **{DATA_DIR}**.\n\n"
-        "Expect names like `May_Data_Matrix.xlsx`, `June_Data_Matrix.csv`, etc."
-    )
-    with st.expander("Troubleshoot"):
-        st.write({
-            "DATA_DIR": str(DATA_DIR),
-            "Files seen": [p.name for p in DATA_DIR.glob('*')],
-            "Pattern": MONTH_FILE_RE.pattern
-        })
-    st.stop()
+    required = {"Group", "Amount"}
+    if not required.issubset(df.columns):
+        raise ValueError(f"Missing one of {required} in {path.name} (data 1)")
 
-st.sidebar.subheader("Pick months")
-start_m, end_m = st.sidebar.select_slider(
-    "Month range",
-    options=months_available,
-    value=(months_available[0], months_available[-1])  # safe now
-)
-# Make inclusive range
-start_idx = months_available.index(start_m)
-end_idx = months_available.index(end_m)
-months_selected = months_available[min(start_idx, end_idx):max(start_idx, end_idx)+1]
+    out = df[["Group", "Amount"]].copy()
+    out["Amount"] = (
+        out["Amount"].astype("string")
+        .str.replace(r"[\$,]", "", regex=True)
+        .replace({"": "0", pd.NA: "0"})
+    ).astype(float)
+
+    out["Group"] = out["Group"].astype("string").fillna("").str.strip()
+    out["Month"] = month_label
+    return out
 
 @st.cache_data(show_spinner=False)
-def load_month_file(path: Path, month_label: str) -> pd.DataFrame:
+def load_data2(path: Path, month_label: str) -> pd.DataFrame:
+    """Read sheet 'data 2' with columns ['Category','Count','Amount']."""
     if path.suffix.lower() == ".csv":
         df = pd.read_csv(path)
     else:
-        # pip install openpyxl
-        df = pd.read_excel(path, engine="openpyxl")
-    df["Month"] = month_label
-    return df
+        df = pd.read_excel(path, sheet_name="data 2", engine="openpyxl")
+    df.columns = [c.strip() for c in df.columns]
 
-frames = [load_month_file(month_to_path[m], m) for m in months_selected] if months_selected else []
-df_all = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    required = {"Category", "Count", "Amount"}
+    if not required.issubset(df.columns):
+        missing = required - set(df.columns)
+        raise ValueError(f"Missing one of {required} in {path.name} (data 2). Missing: {missing}")
 
-if df_all.empty:
-    st.info("No month files found or none selected.")
-    st.stop()
-
-st.caption(f"Loaded months: **{', '.join(months_selected)}**")
-
-# ---- Choose columns (auto-detect sensible defaults) ----
-num_cols = [c for c in df_all.columns if pd.api.types.is_numeric_dtype(df_all[c])]
-cat_cols = [c for c in df_all.columns if not pd.api.types.is_numeric_dtype(df_all[c]) and c not in {"Month"}]
-
-# Helpful defaults if they exist
-default_y = "Total monthly shipment" if "Total monthly shipment" in df_all.columns else (num_cols[0] if num_cols else None)
-default_x = "Ingredient" if "Ingredient" in df_all.columns else (cat_cols[0] if cat_cols else None)
-
-left, right = st.columns(2)
-with left:
-    x_cat = st.selectbox("Category (x-axis)", options=cat_cols, index=cat_cols.index(default_x) if default_x in cat_cols else 0)
-with right:
-    y_metric = st.selectbox("Metric (y-axis)", options=num_cols, index=num_cols.index(default_y) if default_y in num_cols else 0)
-
-# Keep a stable category order across all selected months
-cat_order = sorted(df_all[x_cat].astype(str).unique())
-cat_to_rank = {c: i for i, c in enumerate(cat_order, start=1)}
-
-df_all["_cat_str"] = df_all[x_cat].astype(str)
-df_all["_rank"] = df_all["_cat_str"].map(cat_to_rank)
-
-# Base encodings used in all charts
-def dotlayer(data, color_by_month=True):
-    enc = {
-        "x": alt.X(f"_cat_str:N", sort=cat_order, title=x_cat, axis=alt.Axis(labelAngle=0)),
-        "y": alt.Y(f"{y_metric}:Q", title=y_metric),
-        "tooltip": [
-            alt.Tooltip("_cat_str:N", title=x_cat),
-            alt.Tooltip("Month:N"),
-            alt.Tooltip(f"{y_metric}:Q", format=",.2f", title=y_metric),
-        ],
-    }
-    if color_by_month:
-        enc["color"] = alt.Color("Month:N", legend=alt.Legend(title="Month"))
-    return alt.Chart(data).mark_point(size=70, filled=True).encode(**enc)
-
-def trendlayer(data, color_by_month=True):
-    # regression(y, x, groupby=...)
-    base = alt.Chart(data).transform_regression(
-        y_metric, "_rank", groupby=["Month"] if color_by_month else []
+    out = df[["Category", "Count", "Amount"]].copy()
+    out["Category"] = out["Category"].astype("string").fillna("").str.strip()
+    out["Count"] = pd.to_numeric(out["Count"], errors="coerce").fillna(0)
+    out["Amount"] = (
+        out["Amount"].astype("string")
+        .str.replace(r"[\$,]", "", regex=True)
+        .replace({"": "0", pd.NA: "0"})
     )
-    enc = {
-        "x": alt.X("_rank:Q", title=None, axis=None),
-        "y": alt.Y("y:Q", title=y_metric),
-    }
-    if color_by_month:
-        enc["color"] = alt.Color("Month:N", legend=None)
-    return base.mark_line(size=2, opacity=0.8).encode(**enc)
+    out["Amount"] = pd.to_numeric(out["Amount"], errors="coerce").fillna(0.0)
+    out["Month"] = month_label
+    return out
 
-# ---- Tabs: overlay + per-month ----
-tabs = st.tabs(["🔎 All selected months (overlay)"] + [f"📅 {m}" for m in months_selected])
+# ---------- UI ----------
+tabs = st.tabs(["📊 Data 1 — Stacked Revenue", "🥧 Data 2 — Category Pies"])
 
-# Overlay tab: all months colored
+# =========================
+# === TAB 1: DATA 1 UI ===
+# =========================
 with tabs[0]:
-    chart = (dotlayer(df_all, color_by_month=True) + trendlayer(df_all, color_by_month=True)).properties(height=440)
+    st.markdown(
+        f"""
+        <div style="display:flex;align-items:center;gap:10px;margin:10px 0 4px 0;">
+          <div style="width:12px;height:28px;background:{PRIMARY};border-radius:3px;"></div>
+          <h3 style="margin:0;">Stacked Revenue by Group</h3>
+        </div>
+        """, unsafe_allow_html=True
+    )
+
+    month_to_path = discover_month_files()
+    if not month_to_path:
+        st.error(f"No files found in {DATA_DIR}")
+        st.stop()
+    months_all = list(month_to_path.keys())
+
+    # Controls inside the tab
+    st.caption("Choose the month range for Data 1:")
+    start_m, end_m = st.select_slider(
+        "Month Range", options=months_all,
+        value=(months_all[0], months_all[-1]),
+        label_visibility="collapsed",
+    )
+    i0, i1 = months_all.index(start_m), months_all.index(end_m)
+    lo, hi = sorted([i0, i1])
+    months_d1 = months_all[lo:hi+1]
+
+    with st.expander("Advanced groups (optional)"):
+        d1_groups = st.multiselect("Stack segments", D1_GROUPS, default=D1_GROUPS)
+        if not d1_groups:
+            st.warning("At least one group is required; reverting to defaults.")
+            d1_groups = D1_GROUPS[:]
+    color_scale = alt.Scale(domain=d1_groups, range=D1_COLORS[:len(d1_groups)])
+
+    # Load & combine
+    frames1 = [load_data1(month_to_path[m], m) for m in months_d1]
+    d1 = pd.concat(frames1, ignore_index=True) if frames1 else pd.DataFrame(columns=["Group","Amount","Month"])
+
+    # Ensure each selected month has all groups (missing -> 0)
+    pivot = (
+        d1.groupby(["Month", "Group"], as_index=False)["Amount"].sum()
+          .pivot(index="Month", columns="Group", values="Amount")
+    )
+    pivot = pivot.reindex(index=months_d1).reindex(columns=d1_groups).fillna(0.0)
+
+    long = pivot.reset_index().melt(id_vars="Month", var_name="Group", value_name="Amount")
+    tot = long.groupby("Month", as_index=False)["Amount"].sum().rename(columns={"Amount": "Total"})
+    long = long.merge(tot, on="Month", how="left")
+
+    chart = (
+        alt.Chart(long)
+        .mark_bar()
+        .encode(
+            x=alt.X("Month:N", sort=months_d1, axis=alt.Axis(labelAngle=0), title=None),
+            y=alt.Y("Amount:Q", stack="zero", title="Total ($)"),
+            color=alt.Color("Group:N", scale=color_scale, title="Group"),
+            order=alt.Order("Group:N"),
+            tooltip=[
+                alt.Tooltip("Month:N"),
+                alt.Tooltip("Group:N"),
+                alt.Tooltip("Amount:Q", format=",.2f", title="Group Amount ($)"),
+                alt.Tooltip("Total:Q", format=",.2f", title="Month Total ($)"),
+            ],
+        )
+        .properties(height=430)
+    )
     st.altair_chart(chart, use_container_width=True)
 
-# Per-month tabs with their own (optional) metric picker
-for i, m in enumerate(months_selected, start=1):
-    with tabs[i]:
-        df_m = df_all[df_all["Month"] == m]
-        # Optional: let each month choose a different metric (comment out to lock global metric)
-        # local_metric = st.selectbox(f"{m} metric", options=num_cols, index=num_cols.index(y_metric))
-        # chart_m = (dotlayer(df_m.assign(**{y_metric: df_m[local_metric]}), color_by_month=False)
-        #            + trendlayer(df_m.assign(**{y_metric: df_m[local_metric]}), color_by_month=False))
-        chart_m = (dotlayer(df_m, color_by_month=False) + trendlayer(df_m, color_by_month=False)).properties(height=440)
-        st.altair_chart(chart_m, use_container_width=True)
+    with st.expander("Show totals table"):
+        st.dataframe(
+            pivot.assign(**{"Month Total ($)": pivot.sum(axis=1)}).reset_index(),
+            use_container_width=True
+        )
 
-st.markdown(
-    """
-**Notes**
-- Dots show the selected metric per category; colors indicate month in the overlay.
-- The “trendline” is a simple regression of the metric vs a stable integer rank of the categories
-  (needed because statistical fits require a numeric x-axis).
-- Keep your sheet column names consistent (e.g., `Ingredient`, `Total monthly shipment`) for the best defaults.
-"""
-)
+# =========================
+# === TAB 2: DATA 2 UI ===
+# =========================
+with tabs[1]:
+    st.markdown(
+        f"""
+        <div style="display:flex;align-items:center;gap:10px;margin:10px 0 4px 0;">
+          <div style="width:12px;height:28px;background:{PRIMARY};border-radius:3px;"></div>
+          <h3 style="margin:0;">Category Share by Month (Pie)</h3>
+        </div>
+        """, unsafe_allow_html=True
+    )
 
+    month_to_path = discover_month_files()
+    months_all = list(month_to_path.keys())
+    if not months_all:
+        st.error(f"No files found in {DATA_DIR}")
+        st.stop()
+
+    # Left = controls + the ONLY legend. Right = charts.
+    left, right = st.columns([1.05, 2.0], gap="large")
+
+    with left:
+        st.caption("Choose months and categories for Data 2:")
+
+        # Month selector (multiselect)
+        m_sel = st.multiselect("Months", months_all, default=months_all)
+        if not m_sel:
+            st.info("Select at least one month.")
+            st.stop()
+
+        # Category selector with “Use all” toggle
+        use_all = st.checkbox("Use all categories", value=True, help="Turn off to pick a subset.")
+        if use_all:
+            cats_selected = D2_CATEGORIES[:]           # all
+        else:
+            # Start empty so you can truly select none if desired
+            cats_selected = st.multiselect(
+                "Categories (scroll + search)",
+                options=D2_CATEGORIES,
+                default=[],                             # <-- key fix: don't default to all
+                help="Scroll or search to select one or more categories."
+            )
+
+        # ---- Single legend UNDER the controls (only here) ----
+        if cats_selected:
+            color_scale = alt.Scale(domain=cats_selected, scheme="tableau10")
+            legend_df = pd.DataFrame({"Category": cats_selected})
+            legend_chart = (
+                alt.Chart(legend_df)
+                .mark_rect(width=14, height=14)
+                .encode(
+                    y=alt.Y("Category:N", sort=cats_selected, axis=alt.Axis(title=None)),
+                    color=alt.Color("Category:N", scale=color_scale, legend=None),
+                )
+                .properties(width=200, height=min(24 * len(cats_selected), 360))
+            )
+            st.markdown("**Legend**")
+            st.altair_chart(legend_chart, use_container_width=False)
+        else:
+            # If none picked, still define a color_scale so downstream code can reference it.
+            color_scale = alt.Scale(domain=[], scheme="tableau10")
+
+        # Layout for pies
+        per_row = 2
+
+    with right:
+        # Load & filter data
+        frames2 = [load_data2(month_to_path[m], m) for m in m_sel]
+        d2 = pd.concat(frames2, ignore_index=True) if frames2 else pd.DataFrame(columns=["Category","Count","Amount","Month"])
+
+        # Normalize categories
+        d2["Category"] = d2["Category"].astype("string").fillna("").str.strip()
+
+        # Apply category filter
+        if cats_selected:
+            d2 = d2[d2["Category"].isin(cats_selected)]
+        else:
+            d2 = d2.iloc[0:0]  # empty on purpose if user chose none
+
+        # Remove zero-amount slices
+        d2 = d2[d2["Amount"] > 0]
+
+        if d2.empty:
+            st.info("No data for the chosen filters.")
+        else:
+            # Aggregate per month/category
+            agg = (
+                d2.groupby(["Month", "Category"], as_index=False)[["Amount", "Count"]]
+                  .sum()
+            )
+
+            # Render pies 2 per row with spacing; no labels on slices (tooltips only)
+            for i in range(0, len(m_sel), per_row):
+                row = st.columns(per_row, gap="large")
+                for col, month in zip(row, m_sel[i:i+per_row]):
+                    dfm = agg[(agg["Month"] == month)]
+                    if dfm.empty:
+                        continue
+
+                    total_amt = dfm["Amount"].sum()
+                    title = f"{month} • ${total_amt:,.0f}"
+
+                    pie = (
+                        alt.Chart(dfm, title=title)
+                        .mark_arc(outerRadius=110, innerRadius=0)  # no labels on slices
+                        .encode(
+                            theta=alt.Theta("Amount:Q", stack=True, title=None),
+                            color=alt.Color("Category:N", scale=color_scale, legend=None),
+                            tooltip=[
+                                alt.Tooltip("Category:N"),
+                                alt.Tooltip("Count:Q", format=",.0f", title="Units"),
+                                alt.Tooltip("Amount:Q", format=",.2f", title="Sales ($)"),
+                            ],
+                        )
+                        .properties(width=300, height=300)
+                    )
+                    with col:
+                        st.altair_chart(pie, use_container_width=False)
+
+    with st.expander("Show raw table (Data 2)"):
+        st.dataframe(d2.sort_values(["Month", "Category"]), use_container_width=True)
