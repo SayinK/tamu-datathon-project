@@ -32,7 +32,7 @@ st.sidebar.header("Controls")
 # Filters
 freq_options = ["All", "Weekly", "Biweekly", "Monthly"]
 freq_selected = st.sidebar.selectbox(
-    "Frequency:",
+    "frequency:",
     options=freq_options,
 )
 
@@ -61,8 +61,8 @@ if sort_selected:
 # How many bars
 top_n = st.sidebar.slider(
     "Show top N rows",
-    min_value=2,
-    max_value=max(3, len(filt)),
+    min_value=1,
+    max_value=max(2, len(filt)),
     value=min(12, len(filt))
 )
 
@@ -75,17 +75,22 @@ chart = (
     alt.Chart(plot_df)
     .mark_bar(color="#D41919")   # ← Not a redass TAMU maroon hex
     .encode(
-        x=alt.X("Ingredient:N", sort=sort_dir, title="Ingredient"),
-        y=alt.Y("Total monthly shipment:Q", title="Total per month"),
+        x=alt.X(
+            "Ingredient:N",
+            sort=sort_dir,
+            title="Ingredient",
+            axis=alt.Axis(labelAngle=0)   # <--- key line!
+        ),
+        y=alt.Y("Total monthly shipment:Q", title="Total Per Month"),
         tooltip=[
             alt.Tooltip("Ingredient:N"),
-            alt.Tooltip("Unit of shipment:N"),
-            alt.Tooltip("Quantity per shipment:Q"),
-            alt.Tooltip("Number of shipments:Q"),
-            alt.Tooltip("frequency:N"),
-            alt.Tooltip("Total monthly shipment:Q", format=",.0f"),
+            alt.Tooltip("Unit of shipment:N", title="Unit of Shipment"),
+            alt.Tooltip("Quantity per shipment:Q", title="Quantity per Shipment"),
+            alt.Tooltip("Number of shipments:Q", title="Number of Shipments"),
+            alt.Tooltip("frequency:N", title="Order Frequency"),
+            alt.Tooltip("Total monthly shipment:Q", title="Total Per Month",format=",.0f"),
         ],
     )
     .properties(height=420)
 )
-st.altair_chart(chart, use_container_width=True)
+st.altair_chart(chart, width='stretch')
