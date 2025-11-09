@@ -1,4 +1,3 @@
-# Interactive Expected vs Actual Shipments Dashboard (Top 14 Ingredients)
 import streamlit as st
 import pandas as pd
 import altair as alt
@@ -8,23 +7,19 @@ st.set_page_config(page_title="Expected vs Actual Shipments", layout="wide")
 st.title("Expected vs Actual Shipments per Ingredient")
 st.caption("Compare expected monthly shipments vs actual shipped quantities interactively.")
 
-# ---------- LOAD DATA ----------
-CSV_PATH = Path("data/MSY Data - Shipment.csv")  # adjust path if needed
+CSV_PATH = Path("data/MSY Data - Shipment.csv")
 df = pd.read_csv(CSV_PATH)
 df['frequency'] = df['frequency'].str.lower().str.strip()
 
-# ---------- CALCULATE EXPECTED AND ACTUAL ----------
 freq_multiplier = {"weekly": 4, "biweekly": 2, "monthly": 1}
 df['freq_mult'] = df['frequency'].map(freq_multiplier)
 df['expected_monthly_quantity'] = df['Quantity per shipment'] * df['Number of shipments'] * df['freq_mult']
 df['actual_quantity'] = df['Quantity per shipment'] * df['Number of shipments']
 df['potential_delay'] = df['actual_quantity'] < df['expected_monthly_quantity']
 
-# ---------- FILTER TOP 14 ----------
 top_n = 14
 df = df.nlargest(top_n, 'expected_monthly_quantity')
 
-# ---------- INTERACTIVE ALT AIR CHART ----------
 chart_df = df.melt(
     id_vars=["Ingredient"], 
     value_vars=["expected_monthly_quantity", "actual_quantity"], 
@@ -51,11 +46,9 @@ alt_chart = (
 
 st.altair_chart(alt_chart, use_container_width=True)
 
-# ---------- POTENTIAL DELAYS ----------
 delayed = df[df['potential_delay']]
 if not delayed.empty:
     st.warning("Ingredients potentially delayed:")
     st.table(delayed[['Ingredient', 'expected_monthly_quantity', 'actual_quantity']])
 else:
     st.success("No potential delays detected for the top 14 ingredients.")
-
