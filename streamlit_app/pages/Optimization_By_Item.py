@@ -15,7 +15,6 @@ mode = st.sidebar.selectbox(
     ["Item Optimization", "Ingredient Optimization"]
 )
 
-# ITEM OPTIMIZATION
 @st.cache_data
 def load_month_data(file_path, sheet_name, month_name):
     """Loads Excel data for one month and cleans it."""
@@ -51,7 +50,6 @@ dfs = [load_month_data(path, sheet, name) for path, sheet, name in files if os.p
 dfs = [df for df in dfs if df is not None]
 
 
-# INGREDIENT OPTIMIZATION
 @st.cache_data
 def load_ingredient_data():
     """Loads and processes ingredient-level optimization."""
@@ -121,10 +119,6 @@ def load_ingredient_data():
 
     return ingredient_profit_per_month, month_total_profit
 
-
-# =====================================================
-# =============== PAGE LOGIC ==========================
-# =====================================================
 if mode == "Item Optimization":
     st.header("📈 Optimization by Item")
 
@@ -138,7 +132,7 @@ if mode == "Item Optimization":
     st.sidebar.header("📅 Filters")
     month_names = [name for _, _, name in files]
     selected_month = st.sidebar.selectbox("Select month:", month_names)
-    top_n = 14  # fixed number of bars
+    top_n = 14 
 
     selected_tuple = next((f for f in files if f[2] == selected_month), None)
     if selected_tuple:
@@ -201,5 +195,6 @@ elif mode == "Ingredient Optimization":
 
     st.plotly_chart(fig, use_container_width=True)
     st.dataframe(df_plot)
+
 
 
